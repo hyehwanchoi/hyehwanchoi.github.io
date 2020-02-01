@@ -24,19 +24,23 @@ Output: ""
 
 **Explanation: There is no common prefix among the input strings.**  
 
-<pre><code>
+```
 public String longestCommonPrefix(String[] strs) {
-  if(strs.length == 0) return ""; // 파라미터가 없을 경우 공백 반환(테스트케이스에 있었다)
-  String answer = strs[0]; // 첫번째 문자열을 기준으로 만듦
+  // 파라미터가 없을 경우 공백 반환
+  if(strs.length == 0) return "";
+  // 첫번째 문자열을 기준으로 만듦
+  String answer = strs[0];
 
-  for(int i=1; i<strs.length; i++) { // 첫번째 문자열을 뺀 나머지 문자열들을 반복하여
-    while(strs[i].indexOf(answer) != 0) { // 기준이 되는 문자열과 비교되는 문자열이 같지 않다면
-      answer = answer.substring(0, answer.length() - 1); // 기준이 되는 문자열을 뒤에서부터 하나씩 자른다
-                                                 // 같은 문자가 있을 경우 다음 문자열과 현재 남은 문자열과 비교
-      if(answer.isEmpty()) return ""; // 공통된 문자열이 하나도 없을 경우 공백을 반환
+  // 첫번째 문자열을 뺀 나머지 문자열들을 반복하여
+  for(int i=1; i<strs.length; i++) {
+    // 기준이 되는 문자열과 비교되는 문자열이 같지 않다면
+    while(strs[i].indexOf(answer) != 0) {
+      // 기준이 되는 문자열을 뒤에서부터 하나씩 자른다
+      answer = answer.substring(0, answer.length() - 1);
+      // 공통된 문자열이 하나도 없을 경우 공백을 반환
+      if(answer.isEmpty()) return "";
     }
   }
   return answer;
 }
-</code></pre>
-
+```
