@@ -12,7 +12,7 @@
 
 # theme                  : "minimal-mistakes-jekyll"
 # remote_theme           : "mmistakes/minimal-mistakes"
-minimal_mistakes_skin    : "aqua" # "default" "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
+minimal_mistakes_skin    : "air" #"aqua" "default" "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
 
 # Site Settings
 locale                   : "en-US"
@@ -108,10 +108,11 @@ analytics:
 # Site Author
 author:
   name             : "HyeHwan Choi"
-  avatar           : # path of avatar image, e.g. "/assets/images/bio-photo.jpg"
+  avatar           : "/assets/images/character.png"
   bio              : "To be the best"
   location         : "South Korea Seoul"
   email            : chh2644@gmail.com
+  github           : github.com/hyehwanchoi
   links:
     - label: "Email"
       icon: "fas fa-fw fa-envelope-square"
@@ -291,5 +292,5 @@ defaults:
       author_profile: true
       read_time: true
       comments: # true
-      share: true
+      share: false
       related: true
