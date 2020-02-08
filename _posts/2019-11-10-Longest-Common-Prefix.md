@@ -8,7 +8,9 @@ tags:   algorithm
 cover:  "/assets/instacode.png"
 ---
 
-# Longest Common Prefix
+# 가장 긴 공통 접두사
+
+Difficulty: Easy  
 
 Question)
 Write a function to find the longest common prefix string amongst an array of strings.  
@@ -22,8 +24,9 @@ Output: "fl"
 Input: ["dog","racecar","car"]  
 Output: ""      
 
-**Explanation: There is no common prefix among the input strings.**  
+**Explanation: There is no common prefix among the input strings.**    
 
+**Solution :**
 ```
 public String longestCommonPrefix(String[] strs) {
   // 파라미터가 없을 경우 공백 반환
