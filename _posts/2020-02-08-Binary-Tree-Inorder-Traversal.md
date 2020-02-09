@@ -25,6 +25,8 @@ Input: [1,null,2,3]
 3 level   3 (leaf node)
 Output: [1,3,2]
 ```
+
+**Follow up: Recursive solution is trivial, could you do it iteratively?**
       
 
 문제를 풀기 위해 트리와 이진트리(binary tree)에 대해서 알아보겠습니다.    
@@ -54,15 +56,27 @@ Output: [1,3,2]
  * }
  */
 class Solution {
-    List<Integer> returnList = new ArrayList<Integer>();
+	List<Integer> returnList = new ArrayList<Integer>();
     public List<Integer> inorderTraversal(TreeNode root) {
         if(root != null){
-            inorderTraversal(root.left); // 루트 노드의 왼쪽으로 이동
+            inorderTraversal(root.left); // 루트 노드의 왼쪽 탐색
             returnList.add(root.val);
-            inorderTraversal(root.right); // 루트 노드의 오른쪽으로 이동
+            inorderTraversal(root.right); // 루트 노드의 오른쪽 탐색
         }
         
         return returnList;
     }
 }
+
+// 코딩인터뷰 완전분석 책 참조한 코드
+// 중위순회는 left node -> root -> right node
+void inOrderTraversal(TreeNode node) {
+	if(node != null) {
+    	inOrderTraversal(node.left);  // 왼쪽 서브노드 방문
+        visit(node);				  // 루트노드 방문
+        inOrderTraversal(node.right); // 오른쪽 서브노드 방문
+    }
+}
+
+
 ```
