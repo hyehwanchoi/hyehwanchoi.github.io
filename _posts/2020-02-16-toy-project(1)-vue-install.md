@@ -5,7 +5,6 @@ date:   2020-02-15 11:14:00
 author: HyeHwan Choi
 categories: toy-project
 tags:   vue
-comments: true
 ---
 
 ## 들어가며
