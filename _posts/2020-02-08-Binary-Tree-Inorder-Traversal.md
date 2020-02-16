@@ -1,7 +1,7 @@
 ---
 layout: single
 title:  "Binary Tree Inorder Traversal"
-date:   2019-11-10 21:00:00
+date:   2020-02-08 21:00:00
 author: HyeHwan Choi
 categories: algorithm
 tags:   algorithm
