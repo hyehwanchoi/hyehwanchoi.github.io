@@ -1,7 +1,7 @@
 ---
 layout: single
 title:  "ToyProejct JPA Error"
-date:   2020-02-15 11:14:00
+date:   2020-05-23 11:14:00
 author: HyeHwan Choi
 categories: toy-project
 tags:   JPA
