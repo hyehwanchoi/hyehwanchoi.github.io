@@ -17,15 +17,43 @@ Ubuntu Desktop에 Robo3T도 설치하여 mongoDB GUI 버전으로 공부중입�
 
 ## mongoDB 란?
 
-## mongoDB 문법
-- Collection생성, table 생성, insert
+## mongoDB 문법    
+- DB, table 조회, 접근 및 생성
 ```
-1.
+1. DB 조회 : show dbs
+2. DB 선택 or 생성 : use local
+3. Collection 조회 : show collections
+4. Collection 생성 : db.createCollection("test")
+```
+
+- collection 삭제
+```
+1. 삭제할 Collection이 있는 DB 접속 : use testDb
+2. 삭제 : db.table.drop()
+```
+
+- DB 삭제
+```
+1. 삭제할 DB 접속 : use testDb
+2. db.dropDatabase()
+```
+
+- find
+```
+1. db.getCollection("table").find({});
 ```
 
 - end, or
 ```
-1.
+1. db.table.find(
+	$and 또는 $or: [ {"date:"2016"}, {"name":"Jang"} ]
+)
+2. db.table.find({
+	$and: [
+    	{"date":"2016"},
+        {$or:[ {"name":"Kim"}, {"name":"Kang"} ]}
+    ]
+})
 ```
 
 - LIKE '%a%'
@@ -34,14 +62,14 @@ Ubuntu Desktop에 Robo3T도 설치하여 mongoDB GUI 버전으로 공부중입�
 2. db.table.find({ "name":$regex:"a" })
 ```
 
-- LIKE 'P%'
+- LIKE 'a%'
 ```
-1. db.table.find({"name":/^P/})
+1. db.table.find({"name":/^a/})
 ```
 
-- LIKE '%P'
+- LIKE '%a'
 ```
-1. db.table.find({"name":/^P$/})
+1. db.table.find({"name":/a$/})
 ```
 
 - where hits > 10
