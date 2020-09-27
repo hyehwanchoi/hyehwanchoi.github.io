@@ -16,6 +16,9 @@ tags:   mongodb
 Ubuntu Desktop에 Robo3T도 설치하여 mongoDB GUI 버전으로 공부중입니다.    
 
 ## mongoDB 란?
+mongoDB는 NoSQL로 기존 RDBMS와는 다르게 Schema-Free 한 구조입니다.  
+그래서 RDBMS처럼 정해진 컬럼없이 데이터 저장이 가능하며,  
+JSON 형태로 저장합니다.
 
 ## mongoDB 문법    
 - DB, table 조회, 접근 및 생성
