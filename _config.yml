@@ -99,7 +99,7 @@ social:
 
 # Analytics
 analytics:
-  provider               : "google"
+  provider               : "google-gtag"
   google:
     tracking_id          : "UA-138727667-1"
     measurement_id       : "G-HF6T57ZQ2F"
