@@ -2,7 +2,7 @@
 layout: single
 title:  "오늘의 일기(2)"
 date:   2022-12-18 22:00:00
-lastmod : 2022-12-18 22:00:00
+lastmod : 2022-12-20 22:00:00
 sitemap :
 changefreq : daily
 priority : 1.0
@@ -25,3 +25,5 @@ tags:   diary
 
 결론은 "나무만 보지말고 숲을 봐야한다" 입니다. <br/>
 꼭 명심해서 23년에는 더 나은, 더 신뢰를 줄 수 있는 개발자가 되기를 노력할 것입니다.
+
+To be the best ~
