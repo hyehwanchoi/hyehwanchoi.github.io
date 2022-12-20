@@ -1,6 +1,6 @@
 ---
 layout: single
-title:  "오늘의 일기(2)"
+title:  "오늘의 일기2"
 date:   2022-12-18 22:00:00
 lastmod : 2022-12-20 22:00:00
 sitemap :
