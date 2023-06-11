@@ -2,7 +2,7 @@
 layout: single
 title:  "면접에 대한 생각"
 date:   2023-06-10 13:00:00
-lastmod : 2023-06-10 13:00:00
+lastmod : 2023-06-12 12:10:00
 sitemap :
 changefreq : daily
 priority : 1.0
