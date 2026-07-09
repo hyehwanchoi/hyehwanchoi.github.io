@@ -1,8 +1,8 @@
 ---
 layout: single
 title:  "Kafka로 대용량 위치 데이터를 실시간 처리하며 배운 것들"
-date:   2026-07-09 13:00:00
-lastmod : 2026-07-09 13:00:00
+date:   2026-07-09 12:00:00
+lastmod : 2026-07-09 12:00:00
 sitemap :
 changefreq : daily
 priority : 1.0
