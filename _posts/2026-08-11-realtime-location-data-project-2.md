@@ -1,8 +1,8 @@
 ---
 layout: single
-title:  "실시간 위치 데이터 처리 시스템 개선기 (2): Kafka 장애 로그에서 성능 병목을 찾기까지"
+title:  "실시간 위치 데이터 처리 시스템 개선기 (2): 120초 Timeout 로그에서 병목을 찾기까지"
 date:   2026-08-11 09:30:00 +0900
-lastmod : 2026-08-11 09:30:00 +0900
+lastmod : 2026-08-11 15:00:00 +0900
 sitemap :
 changefreq : daily
 priority : 1.0
@@ -13,7 +13,7 @@ tags:   kafka vertx zookeeper backend realtime troubleshooting performance
 
 [지난 글](/project/realtime-location-data-project/)에서는 일정 시간 데이터를 모아 처리하던 구조를 실시간 흐름으로 바꾸면서 어떤 원칙을 세웠는지 정리했습니다.
 
-실시간 처리로 전환했다고 해서 작업이 끝난 것은 아니었습니다. 처리 주기가 짧아지자 기존에는 잘 드러나지 않던 지연과 실패가 로그에 나타나기 시작했습니다.
+실시간 처리로 전환한 뒤에는 한숨 돌릴 수 있을 거라고 생각했습니다. 그런데 처리 주기가 짧아지자, 그동안 숨어 있던 지연과 실패가 기다렸다는 듯 로그에 함께 나타나기 시작했습니다.
 
 - Producer record가 120초 후 만료됐다.
 - Vert.x 이벤트 루프가 3~6초 동안 멈췄다.
@@ -21,7 +21,7 @@ tags:   kafka vertx zookeeper backend realtime troubleshooting performance
 - Kafka broker의 `Node disconnected` 로그가 반복됐다.
 - ZooKeeper는 일부 client의 session 요청을 거부했다.
 
-처음에는 모두 Kafka 클러스터의 문제처럼 보였습니다. 하지만 로그가 비슷한 시간대에 발생했다는 사실만으로 원인까지 같다고 볼 수는 없습니다.
+솔직히 처음에는 Kafka 클러스터가 불안정해진 것으로 봤습니다. timeout, disconnect, rebalance가 비슷한 시간에 찍혔기 때문입니다. 하지만 로그를 하나씩 코드 흐름 위에 올려놓자 서로 다른 계층의 문제가 한꺼번에 보였을 뿐이라는 사실이 드러났습니다.
 
 이번 글에서는 각각의 로그가 어느 계층에서 발생했고, 어떤 코드와 설정을 함께 확인했는지 정리합니다. 회사명, 서버 주소, 실제 topic 이름, 장비 식별자는 일반화했습니다. 아직 측정하지 않은 성능 수치나 적용하지 않은 개선은 완료된 결과처럼 적지 않았습니다.
 
@@ -66,11 +66,11 @@ Expiring N record(s) for topic-partition:
 120000 ms has passed since batch creation
 ```
 
-로그 한 줄에 `reason=size`, `count=10`, `120000 ms`가 함께 나오기 때문에 처음에는 다음과 같이 이해하기 쉽습니다.
+저도 처음에는 `reason=size`, `count=10`, `120000 ms`를 한 덩어리로 읽었습니다. 그래서 다음처럼 이해했습니다.
 
 > 10건을 모으려고 기다리다가 애플리케이션 버퍼가 120초 후 만료됐다.
 
-하지만 실제로는 서로 다른 두 단계의 로그였습니다.
+코드를 따라가 보니 예상이 틀렸습니다. 실제로는 서로 다른 두 단계의 로그였습니다.
 
 `reason=size`는 PMD가 특정 MAC의 데이터를 10건 모아 위치 계산과 후속 publish를 시작했다는 의미입니다. 반면 `120000 ms has passed since batch creation`은 그 이후 Kafka Producer에 전달된 record가 제한시간 안에 broker로 전송되지 못했다는 의미입니다.
 
@@ -159,7 +159,7 @@ Event Loop
   -> KafkaConsumer.commitSync()
 ```
 
-`poll()`이 최대 500ms를 기다리고, DB 조회와 대량 반복 처리, 동기 commit이 같은 이벤트 루프에서 이어집니다. 개별 호출은 짧아 보여도 한 번의 handler 안에서 누적되면 2초 제한을 쉽게 넘길 수 있습니다.
+스택 트레이스를 처음 봤을 때는 `poll()` 하나가 문제처럼 보였습니다. 하지만 코드를 따라가니 최대 500ms를 기다리는 `poll()` 뒤로 DB 조회, 대량 반복 처리, 동기 commit이 같은 이벤트 루프에서 이어지고 있었습니다. 하나씩 보면 짧아 보이는 호출도 한 handler 안에 쌓이면 2초 제한을 쉽게 넘겼습니다.
 
 Vert.x 이벤트 루프는 짧고 non-blocking인 작업에 적합합니다. `blockedThreadCheckInterval`을 늘리면 경고가 늦게 출력될 뿐, 다른 이벤트 처리가 지연되는 문제는 그대로 남습니다.
 
@@ -330,11 +330,11 @@ JMeter와 Kafka UI, 애플리케이션 로그를 함께 사용해 다음 항목�
 
 ## 마무리
 
-이번 문제는 Kafka 설정 하나를 변경해서 해결되는 문제가 아니었습니다.
+처음에는 설정 하나만 찾으면 끝날 거라고 기대했습니다. `delivery.timeout.ms`나 `max.poll.interval.ms` 같은 값을 조정하면 조용해질 것 같았습니다. 하지만 로그를 따라갈수록 문제는 한 군데에 있지 않았습니다.
 
 Producer timeout은 전송 계층에서 발생했고, rebalance는 Consumer의 poll과 처리시간을 확인해야 했으며, blocked-thread는 애플리케이션의 스레드 사용 방식에서 시작됐습니다. ZooKeeper의 zxid 오류는 다시 별도의 quorum과 데이터 동기화 문제였습니다.
 
-비슷한 시간에 나타난 로그를 하나의 원인으로 묶지 않고, 각각을 전체 데이터 흐름 위에 놓은 뒤 코드와 지표를 연결해서 봐야 실제 병목과 데이터 유실 가능 구간을 구분할 수 있었습니다.
+이번 기록은 모든 문제가 해결됐다는 성공담은 아닙니다. 오히려 publish 실패 뒤 사라질 수 있는 버퍼처럼 아직 위험한 경계도 남아 있습니다. 다만 비슷한 시각의 로그를 하나의 원인으로 성급히 묶지 않고, 전체 데이터 흐름 위에서 코드와 지표를 연결해 보는 습관은 얻었습니다.
 
 다음 글에서는 이 과정에서 드러난 전역 설정, Kafka·DB 직접 의존성, 큰 Verticle을 어떻게 테스트 가능한 구조로 분리할 수 있는지 정리해보려고 합니다.
 

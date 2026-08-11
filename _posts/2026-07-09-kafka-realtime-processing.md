@@ -1,8 +1,8 @@
 ---
 layout: single
-title:  "Kafka 기본 개념 정리: 실시간 처리를 이해하기 위한 첫걸음"
+title:  "Kafka를 안다고 생각했는데, 운영 로그 앞에서 다시 배운 것들"
 date:   2026-07-09 12:00:00 +0900
-lastmod : 2026-07-09 15:20:00 +0900
+lastmod : 2026-08-11 15:00:00 +0900
 sitemap :
 changefreq : daily
 priority : 1.0
@@ -11,15 +11,13 @@ categories: study
 tags:   kafka backend realtime
 ---
 
-최근 대용량 실시간 데이터를 처리하는 프로젝트를 진행하면서 Kafka를 다시 깊게 보게 되었습니다.
+Kafka를 처음 붙였을 때는 구조가 꽤 단순해 보였습니다. Producer가 보내고 Consumer가 읽는다. 메시지가 많아지면 Consumer를 더 띄우면 될 것 같았습니다.
 
-Kafka는 처음 보면 단순히 메시지를 주고받는 도구처럼 보입니다. Producer가 메시지를 보내고, Consumer가 메시지를 읽습니다. 구조만 보면 크게 어려워 보이지 않습니다.
+그런데 운영 로그 앞에서는 그 설명만으로 풀리지 않는 일이 자꾸 생겼습니다. `latest`인데 왜 지난 메시지가 다시 보이는지, Consumer를 늘렸는데 왜 처리량은 그대로인지, 애플리케이션 로그에는 전송했다고 나오는데 왜 Producer는 120초 뒤 timeout을 내는지 궁금해졌습니다.
 
-하지만 운영 환경에서 Kafka를 만나면 이야기가 달라집니다.
+그때부터 Kafka의 개념을 용어가 아니라 **실제 질문과 연결해서** 다시 보기 시작했습니다. partition은 병렬 처리의 단위였고, offset은 장애 이후 어디서 다시 시작할지를 결정했으며, key 하나가 특정 partition을 바쁘게 만들기도 했습니다.
 
-메시지가 왜 밀리는지, partition은 왜 중요한지, `latest`로 설정했는데 왜 과거 메시지를 읽는지, consumer를 늘렸는데 왜 처리량이 늘지 않는지 같은 질문을 만나게 됩니다.
-
-이 글에서는 Kafka를 처음 공부할 때 알아야 하는 개념들을 정리하되, 단순한 용어 사전처럼 나열하기보다 실제로 어떤 문제를 이해하기 위해 필요한 개념인지 함께 정리해보려고 합니다.
+이 글은 그 과정에서 다시 정리한 Kafka의 기본기입니다. 교과서 순서대로 외우기보다, 운영 중 마주친 로그를 이해하는 데 각 개념이 어떻게 쓰였는지를 중심으로 적었습니다.
 
 ---
 
@@ -82,7 +80,7 @@ Topic: location-raw
   Partition 3
 ```
 
-partition은 Kafka를 이해할 때 가장 중요한 개념 중 하나입니다. Kafka의 병렬 처리, 순서 보장, consumer 확장성이 모두 partition과 연결됩니다.
+처음에는 topic을 잘 나누면 자연스럽게 병렬 처리가 될 거라고 생각했습니다. 실제로 처리량을 좌우한 것은 topic의 개수보다 partition이었습니다. Kafka의 병렬 처리, 순서 보장, consumer 확장성이 모두 이 단위와 연결됩니다.
 
 partition이 1개인 topic은 결국 한 줄로 처리됩니다. Consumer를 여러 개 띄워도 하나의 partition은 동시에 여러 Consumer가 나누어 읽을 수 없습니다.
 
@@ -156,7 +154,7 @@ Consumer Group C -> 분석 처리
 
 이 구조 덕분에 하나의 Kafka topic을 여러 목적의 시스템이 독립적으로 사용할 수 있습니다.
 
-Consumer를 늘렸는데 처리량이 늘지 않는다면 partition 수를 확인해야 합니다. Consumer 수가 partition 수보다 많으면 남는 Consumer는 할당받을 partition이 없습니다.
+실제로 Consumer 수를 늘렸는데 처리량이 그대로라면, 가장 먼저 partition 수를 확인해야 합니다. Consumer 수가 partition 수보다 많으면 남는 Consumer는 일을 못 해서 대기합니다. 프로세스는 늘었는데 처리량은 그대로인 이유가 여기 있었습니다.
 
 ---
 
@@ -200,7 +198,7 @@ earliest: 가장 오래된 메시지부터 읽음
 latest: 새로 들어오는 메시지부터 읽음
 ```
 
-이미 Consumer Group에 offset이 저장되어 있다면 `earliest`나 `latest`보다 저장된 offset이 우선입니다.
+이미 Consumer Group에 offset이 저장되어 있다면 `earliest`나 `latest`보다 저장된 offset이 우선입니다. 저도 `latest`라는 이름만 보고 재시작할 때마다 가장 최근 데이터로 이동한다고 생각했지만, 실제 동작은 달랐습니다.
 
 즉 `latest`로 설정했다고 해서 서비스 재기동 시 항상 최신 메시지부터 읽는 것은 아닙니다.
 
@@ -280,12 +278,8 @@ Producer 설정도 중요하지만, partition, broker, Consumer lag, key 분산�
 
 ## 마무리
 
-Kafka는 처음에는 단순한 메시지 전달 도구처럼 보입니다.
+운영에서 만난 문제들은 어느 하나도 “Kafka가 느리다”라는 한 문장으로 설명되지 않았습니다. 메시지가 밀릴 때는 partition과 lag를 함께 봐야 했고, Consumer를 늘려도 달라지지 않을 때는 할당 구조를 확인해야 했습니다. 과거 메시지가 보일 때는 `latest` 설정이 아니라 저장된 offset부터 찾아봤습니다.
 
-하지만 실제 운영 환경에서는 topic, partition, key, Consumer Group, offset, retention, lag가 모두 연결되어 있습니다.
+이 과정을 거치며 Kafka를 잘 쓴다는 말의 의미도 조금 달라졌습니다. Producer와 Consumer 코드를 연결하는 데서 끝나는 것이 아니라, 데이터가 얼마나 늦어도 되는지, 어떤 기준으로 순서를 지킬지, 실패하면 어디서부터 다시 읽을지를 정하는 일이었습니다.
 
-메시지가 밀릴 때 partition을 봐야 하고, Consumer를 늘렸는데 처리량이 늘지 않을 때 partition 수를 봐야 하고, 최신부터 읽는다고 생각했는데 과거 메시지를 읽을 때 offset을 봐야 합니다.
-
-Kafka를 잘 사용한다는 것은 Producer와 Consumer 코드를 작성하는 것에서 끝나지 않습니다. 데이터가 어떤 의미를 가지는지, 어느 정도 지연을 허용할 수 있는지, 순서를 지켜야 하는 기준은 무엇인지, 장애가 났을 때 어디서부터 다시 읽어야 하는지를 함께 설계하는 일입니다.
-
-이번 글은 Kafka를 이해하기 위한 기본 개념을 정리한 글입니다. 다음에는 실제 프로젝트에서 topic과 partition을 조정하고, Kafka UI와 JMeter를 활용해 성능 테스트를 진행한 내용을 더 구체적으로 정리해보고 싶습니다.
+아직도 로그 한 줄만 보고 바로 원인을 맞히지는 못합니다. 대신 이제는 무엇부터 확인해야 하는지는 조금 더 분명해졌습니다. 다음 글에서는 이 기본 개념들이 실제 위치 데이터 시스템을 실시간 구조로 바꾸는 과정에서 어떻게 이어졌는지 적어보겠습니다.
