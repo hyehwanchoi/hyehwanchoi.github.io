@@ -1,0 +1,21 @@
+<section class="sidebar__recommendations" aria-labelledby="recommended-posts-title">
+  <p class="sidebar__recommendations-eyebrow">Editor's pick</p>
+  <h2 id="recommended-posts-title">추천 글</h2>
+  <p class="sidebar__recommendations-description">운영 경험을 담은 글을 골랐습니다.</p>
+
+  <ol class="sidebar__recommendations-list">
+    {% for item in site.data.recommended_posts %}
+      {% assign recommended_post = site.posts | where: "url", item.url | first %}
+      {% if recommended_post and recommended_post.url != page.url %}
+        <li>
+          <a href="{{ recommended_post.url | relative_url }}">
+            <span>{{ recommended_post.title }}</span>
+            <time datetime="{{ recommended_post.date | date_to_xmlschema }}">{{ recommended_post.date | date: "%Y.%m.%d" }}</time>
+          </a>
+        </li>
+      {% endif %}
+    {% endfor %}
+  </ol>
+
+  <a class="sidebar__recommendations-all" href="{{ '/latest/' | relative_url }}">모든 글 보기 <span aria-hidden="true">→</span></a>
+</section>
