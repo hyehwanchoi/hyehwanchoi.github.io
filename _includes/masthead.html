@@ -22,16 +22,8 @@
             {%- else -%}
               {%- assign url = link.url | relative_url -%}
             {%- endif -%}
-            {%- assign is_current = false -%}
-            {%- if page.url contains link.url or page.permalink == link.url -%}
-              {%- assign is_current = true -%}
-            {%- elsif link.url == '/categories/' and page.url contains '/categories/' -%}
-              {%- assign is_current = true -%}
-            {%- elsif link.url == '/tags/' and page.url contains '/tags/' -%}
-              {%- assign is_current = true -%}
-            {%- endif -%}
             <li class="masthead__menu-item">
-              <a href="{{ url }}"{% if is_current %} aria-current="page"{% endif %} {% if link.description %}title="{{ link.description }}"{% endif %}>{{ link.title }}</a>
+              <a href="{{ url }}" {% if link.description %}title="{{ link.description }}"{% endif %}>{{ link.title }}</a>
             </li>
           {%- endfor -%}
         </ul>
