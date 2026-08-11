@@ -247,4 +247,8 @@ partition 수를 늘리는 것만으로는 충분하지 않습니다. 메시지 
 
 10년차 개발자로서 중요한 것은 단순히 구현을 끝내는 것이 아니라, 시스템이 더 오래 안정적으로 운영될 수 있는 구조를 만드는 것이라고 생각합니다.
 
-이번 글에서는 전체 흐름을 중심으로 정리했습니다. 다음에는 Kafka topic/partition을 조정하면서 어떤 점을 확인했는지, 그리고 JMeter 성능 테스트를 어떻게 구성했는지를 조금 더 자세히 정리해보고 싶습니다.
+이번 글에서는 전체 흐름을 중심으로 정리했습니다.
+
+실시간 전환 이후 확인한 Kafka Producer timeout, Vert.x blocked thread, Consumer rebalance, ZooKeeper 연결 문제는 후속 글에서 더 자세히 정리했습니다.
+
+> [실시간 위치 데이터 처리 시스템 개선기 (2): Kafka 장애 로그에서 성능 병목을 찾기까지](/project/realtime-location-data-project-2/)
