@@ -1,5 +1,7 @@
 # main links
 main:
+  - title: "최신 글"
+    url: /latest/
   - title: "카테고리"
     url: /categories/
   - title: "태그"
