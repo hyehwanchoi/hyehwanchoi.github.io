@@ -11,17 +11,19 @@
 /* Reading-first theme ----------------------------------------------------- */
 
 :root {
-  --reader-surface: #ffffff;
-  --reader-surface-soft: #f4f5f0;
-  --reader-accent: #4f7867;
-  --reader-accent-dark: #315846;
-  --reader-text: #303a35;
-  --reader-muted: #6c756f;
-  --reader-border: #dde2dc;
+  --reader-surface: #fffdf8;
+  --reader-surface-soft: #eee8dc;
+  --reader-accent: #557967;
+  --reader-accent-dark: #294f44;
+  --reader-warm: #b86f55;
+  --reader-warm-soft: #f3e3d9;
+  --reader-text: #293732;
+  --reader-muted: #66736d;
+  --reader-border: #d9ded6;
 }
 
 html {
-  background: #fbfaf6;
+  background: #f7f3eb;
   scroll-behavior: smooth;
 }
 
@@ -40,8 +42,8 @@ body {
   position: sticky;
   top: 0;
   z-index: 20;
-  border-bottom: 1px solid rgba(79, 120, 103, 0.14);
-  background: rgba(251, 250, 246, 0.92);
+  border-bottom: 1px solid rgba(85, 121, 103, 0.18);
+  background: rgba(247, 243, 235, 0.93);
   backdrop-filter: blur(12px);
 }
 
@@ -64,6 +66,11 @@ body {
 #main {
   padding-top: 2.25rem;
   padding-bottom: 4rem;
+}
+
+.archive,
+.page {
+  border-radius: 18px;
 }
 
 .sidebar {
@@ -95,16 +102,23 @@ body {
 }
 
 .list__item {
-  border-bottom: 1px solid var(--reader-border);
+  margin-bottom: 0.9rem;
+  border: 1px solid rgba(85, 121, 103, 0.15);
+  border-radius: 14px;
+  background: linear-gradient(135deg, #fffdf8 0%, #f8f5ed 100%);
+  box-shadow: 0 7px 24px rgba(52, 70, 63, 0.045);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
-.list__item:last-of-type {
-  border-bottom: 0;
+.list__item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(85, 121, 103, 0.32);
+  box-shadow: 0 10px 28px rgba(52, 70, 63, 0.08);
 }
 
 .list__item .archive__item {
   margin-bottom: 0;
-  padding: 1.55rem 0 1.7rem;
+  padding: 1.45rem 1.55rem 1.6rem;
 }
 
 .archive__item-title {
@@ -121,7 +135,18 @@ body {
 }
 
 .archive__item-title a:hover {
-  color: var(--reader-accent);
+  color: var(--reader-accent-dark);
+}
+
+.archive__item-title::before {
+  display: inline-block;
+  width: 0.38rem;
+  height: 0.38rem;
+  margin-right: 0.55rem;
+  border-radius: 50%;
+  background: var(--reader-warm);
+  content: "";
+  vertical-align: 0.18em;
 }
 
 .archive__item-excerpt {
@@ -193,26 +218,80 @@ body {
 }
 
 .page__content code {
-  border: 1px solid #e1e4de;
+  border: 1px solid #ded5c6;
   border-radius: 4px;
   background: var(--reader-surface-soft);
+  color: #8a4f3e;
 }
 
 .page__content pre {
-  border: 1px solid #dde2dc;
-  border-radius: 10px;
-  box-shadow: none;
+  border: 1px solid #385048;
+  border-radius: 12px;
+  background: #20302c;
+  box-shadow: 0 10px 26px rgba(32, 48, 44, 0.13);
+  color: #edf3ee;
   line-height: 1.65;
+}
+
+.page__content .highlight {
+  border-radius: 12px;
+  background: #20302c;
+  color: #edf3ee;
+}
+
+.page__content pre code,
+.page__content .highlight code {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.page__content .highlight .c,
+.page__content .highlight .c1,
+.page__content .highlight .cm {
+  color: #9aaba3;
+}
+
+.page__content .highlight .k,
+.page__content .highlight .kd,
+.page__content .highlight .kt {
+  color: #df9b7e;
+}
+
+.page__content .highlight .s,
+.page__content .highlight .s1,
+.page__content .highlight .s2 {
+  color: #c8d99c;
+}
+
+.page__content .highlight .na,
+.page__content .highlight .nf {
+  color: #9fc8bd;
 }
 
 .toc {
   border-color: var(--reader-border);
   border-radius: 10px;
+  background: #f2f5f0;
   box-shadow: none;
+  overflow: hidden;
 }
 
 .toc .nav__title {
-  background: var(--reader-accent);
+  background: linear-gradient(135deg, #4d7462, #668a77);
+  color: #fffdf8;
+}
+
+.toc__menu a {
+  color: #53665d;
+}
+
+.toc__menu a:hover,
+.toc__menu a.active {
+  background: #e3ebe4;
+  color: var(--reader-accent-dark);
 }
 
 .pagination--pager {
@@ -223,7 +302,7 @@ body {
 
 .page__footer {
   border-top: 1px solid var(--reader-border);
-  background: #eef2ed;
+  background: linear-gradient(135deg, #e8eee8, #ece8df);
   color: #657069;
 }
 
@@ -243,7 +322,7 @@ body {
   }
 
   .list__item .archive__item {
-    padding: 1.25rem 0 1.4rem;
+    padding: 1.2rem 1.1rem 1.35rem;
   }
 
   .archive__item-title {
