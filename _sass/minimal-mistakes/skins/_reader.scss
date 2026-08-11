@@ -1,20 +1,20 @@
-/* A cool, low-contrast reading palette. */
-$background-color: #f2f6fa !default;
-$text-color: #293b4a !default;
-$muted-text-color: #687b8a !default;
-$primary-color: #5f86a5 !default;
-$border-color: #d7e2eb !default;
-$footer-background-color: #e2ebf2 !default;
-$link-color: #3e7095 !default;
-$link-color-hover: #295573 !default;
-$link-color-visited: #6f6480 !default;
-$masthead-link-color: #3f5566 !default;
-$masthead-link-color-hover: #2f5878 !default;
+/* A deep, low-saturation blue-gray reading palette. */
+$background-color: #20323c !default;
+$text-color: #e1ebf0 !default;
+$muted-text-color: #adbec8 !default;
+$primary-color: #86aec5 !default;
+$border-color: #48616f !default;
+$footer-background-color: #1c2d36 !default;
+$link-color: #9bc5dc !default;
+$link-color-hover: #c1dfed !default;
+$link-color-visited: #c4b0ce !default;
+$masthead-link-color: #d8e5eb !default;
+$masthead-link-color-hover: #ffffff !default;
 $navicon-link-color-hover: mix(#fff, $primary-color, 75%) !default;
-$code-background-color: #eaf1f7 !default;
-$code-background-color-dark: #203341 !default;
+$code-background-color: #3a5361 !default;
+$code-background-color-dark: #172832 !default;
 
 .page__footer-follow .social-icons .svg-inline--fa,
 .page__footer-follow .social-icons .fa {
-  color: #657786;
+  color: #9fb3be;
 }
