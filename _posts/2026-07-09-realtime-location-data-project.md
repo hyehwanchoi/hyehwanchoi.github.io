@@ -1,8 +1,8 @@
 ---
 layout: single
 title:  "실시간 위치 데이터 처리 시스템 개선기 (1): 배치성 흐름에서 실시간 처리로"
-date:   2026-07-09 13:15:00
-lastmod : 2026-07-09 15:00:00
+date:   2026-07-09 13:15:00 +0900
+lastmod : 2026-07-09 15:00:00 +0900
 sitemap :
 changefreq : daily
 priority : 1.0

@@ -1,8 +1,8 @@
 ---
 layout: single
 title:  "Kafka 기본 개념 정리: 실시간 처리를 이해하기 위한 첫걸음"
-date:   2026-07-09 12:00:00
-lastmod : 2026-07-09 15:20:00
+date:   2026-07-09 12:00:00 +0900
+lastmod : 2026-07-09 15:20:00 +0900
 sitemap :
 changefreq : daily
 priority : 1.0
