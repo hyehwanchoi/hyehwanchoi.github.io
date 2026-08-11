@@ -12,16 +12,16 @@
 
 # theme                  : "minimal-mistakes-jekyll"
 # remote_theme           : "mmistakes/minimal-mistakes"
-minimal_mistakes_skin    : "air" #"aqua" "default" "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
+minimal_mistakes_skin    : "reader"
 
 # Site Settings
-locale                   : "en-US"
+locale                   : "ko-KR"
 title                    : "HyeHwan's blog"
 title_separator          : "title_separator"
 subtitle                 : # site tagline that appears below site title in masthead
 name                     : "HyeHwan Choi"
-description              : "Experience and learn"
-url                      : # the base hostname & protocol for your site e.g. "https://mmistakes.github.io"
+description              : "경험하고 배운 것을 차분하게 기록합니다."
+url                      : "https://hyehwanchoi.github.io"
 baseurl                  : # the subpath of your site, e.g. "/blog"
 repository               : github.com/hyehwanchoi
 teaser                   : # path of fallback teaser image, e.g. "/assets/images/500x300.png"
@@ -110,10 +110,10 @@ analytics:
 author:
   name             : "HyeHwan Choi"
   avatar           : "/assets/images/character.png"
-  bio              : "To be the best"
-  location         : "South Korea Seoul"
+  bio              : "경험하고 배운 것을 기록합니다."
+  location         : "Seoul, South Korea"
   email            : chh2644@gmail.com
-  github           : github.com/hyehwanchoi
+  github           : hyehwanchoi
   links:
     - label: "Email"
       icon: "fas fa-fw fa-envelope-square"
@@ -290,8 +290,11 @@ defaults:
       type: posts
     values:
       layout: single
-      author_profile: true
+      author_profile: false
       read_time: true
+      show_date: true
+      toc: true
+      toc_sticky: true
       comments:  true
       share: false
       related: true

@@ -1,0 +1,20 @@
+/* A low-contrast, reading-first palette. */
+$background-color: #fbfaf6 !default;
+$text-color: #303a35 !default;
+$muted-text-color: #6c756f !default;
+$primary-color: #4f7867 !default;
+$border-color: #dde2dc !default;
+$footer-background-color: #eef2ed !default;
+$link-color: #3f6f5c !default;
+$link-color-hover: #274d3d !default;
+$link-color-visited: #5f6f66 !default;
+$masthead-link-color: #3d4842 !default;
+$masthead-link-color-hover: #315846 !default;
+$navicon-link-color-hover: mix(#fff, $primary-color, 75%) !default;
+$code-background-color: #f2f3ef !default;
+$code-background-color-dark: #e6e9e3 !default;
+
+.page__footer-follow .social-icons .svg-inline--fa,
+.page__footer-follow .social-icons .fa {
+  color: #657069;
+}
