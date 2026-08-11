@@ -1,20 +1,20 @@
-/* A low-contrast, reading-first palette. */
-$background-color: #f7f3eb !default;
-$text-color: #293732 !default;
-$muted-text-color: #66736d !default;
-$primary-color: #557967 !default;
-$border-color: #d9ded6 !default;
-$footer-background-color: #e8eee8 !default;
-$link-color: #376b5b !default;
-$link-color-hover: #214a3e !default;
-$link-color-visited: #696575 !default;
-$masthead-link-color: #34463f !default;
-$masthead-link-color-hover: #2c5b4d !default;
+/* A cool, low-contrast reading palette. */
+$background-color: #f2f6fa !default;
+$text-color: #293b4a !default;
+$muted-text-color: #687b8a !default;
+$primary-color: #5f86a5 !default;
+$border-color: #d7e2eb !default;
+$footer-background-color: #e2ebf2 !default;
+$link-color: #3e7095 !default;
+$link-color-hover: #295573 !default;
+$link-color-visited: #6f6480 !default;
+$masthead-link-color: #3f5566 !default;
+$masthead-link-color-hover: #2f5878 !default;
 $navicon-link-color-hover: mix(#fff, $primary-color, 75%) !default;
-$code-background-color: #eee8dc !default;
-$code-background-color-dark: #20302c !default;
+$code-background-color: #eaf1f7 !default;
+$code-background-color-dark: #203341 !default;
 
 .page__footer-follow .social-icons .svg-inline--fa,
 .page__footer-follow .social-icons .fa {
-  color: #657069;
+  color: #657786;
 }
