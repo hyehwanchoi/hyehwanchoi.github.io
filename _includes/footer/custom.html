@@ -1,3 +1,22 @@
 <!-- start custom footer snippets -->
 
+<script>
+  (function () {
+    var currentPath = window.location.pathname.replace(/index\.html$/, "");
+    var menuLinks = document.querySelectorAll(".masthead__menu-item a");
+
+    menuLinks.forEach(function (link) {
+      var linkPath = new URL(link.href, window.location.origin).pathname.replace(/index\.html$/, "");
+      var isCurrent = currentPath === linkPath ||
+        (linkPath !== "/" && currentPath.indexOf(linkPath) === 0);
+
+      if (isCurrent) {
+        link.setAttribute("aria-current", "page");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
+  })();
+</script>
+
 <!-- end custom footer snippets -->
