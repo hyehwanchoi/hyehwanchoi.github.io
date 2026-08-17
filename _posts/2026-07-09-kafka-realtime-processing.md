@@ -2,7 +2,7 @@
 layout: single
 title:  "Kafka를 안다고 생각했는데, 운영 로그 앞에서 다시 배운 것들"
 date:   2026-07-09 12:00:00 +0900
-lastmod : 2026-08-11 15:00:00 +0900
+lastmod : 2026-08-17 15:00:00 +0900
 sitemap :
 changefreq : daily
 priority : 1.0
@@ -13,7 +13,7 @@ tags:   kafka backend realtime
 
 Kafka를 처음 붙였을 때는 구조가 꽤 단순해 보였습니다. Producer가 보내고 Consumer가 읽는다. 메시지가 많아지면 Consumer를 더 띄우면 될 것 같았습니다.
 
-그런데 운영 로그 앞에서는 그 설명만으로 풀리지 않는 일이 자꾸 생겼습니다. `latest`인데 왜 지난 메시지가 다시 보이는지, Consumer를 늘렸는데 왜 처리량은 그대로인지, 애플리케이션 로그에는 전송했다고 나오는데 왜 Producer는 120초 뒤 timeout을 내는지 궁금해졌습니다.
+그런데 운영 로그 앞에서는 그 설명만으로 풀리지 않는 일이 자꾸 생겼습니다. `latest`인데 왜 지난 메시지가 다시 보이는지, Consumer를 늘렸는데 왜 처리량은 그대로인지, 애플리케이션 로그에는 전송했다고 나오는데 왜 Producer는 설정된 제한시간 뒤 timeout을 내는지 궁금해졌습니다.
 
 그때부터 Kafka의 개념을 용어가 아니라 **실제 질문과 연결해서** 다시 보기 시작했습니다. partition은 병렬 처리의 단위였고, offset은 장애 이후 어디서 다시 시작할지를 결정했으며, key 하나가 특정 partition을 바쁘게 만들기도 했습니다.
 
@@ -52,12 +52,12 @@ Kafka를 단순한 메시지 큐라고 부르기도 하지만, 실제로는 이�
 
 Kafka에서 topic은 메시지를 구분하는 논리적인 단위입니다.
 
-예를 들어 위치 데이터를 처리하는 시스템이라면 다음처럼 성격에 따라 topic을 나눌 수 있습니다.
+예를 들어 이벤트 데이터를 처리하는 시스템이라면 다음처럼 성격에 따라 topic을 나눌 수 있습니다.
 
 ```text
-location-raw
-location-calculated
-location-forwarding
+event-raw
+event-processed
+event-forwarding
 ```
 
 Producer는 특정 topic으로 메시지를 보내고, Consumer는 필요한 topic을 구독해서 메시지를 읽습니다.
@@ -73,7 +73,7 @@ topic은 메시지를 담는 이름 공간입니다. 하지만 topic을 많이 �
 Kafka에서 topic은 하나 이상의 partition으로 나뉩니다.
 
 ```text
-Topic: location-raw
+Topic: event-raw
   Partition 0
   Partition 1
   Partition 2
@@ -108,16 +108,16 @@ Producer가 메시지를 보낼 때 key를 지정할 수 있습니다.
 Kafka는 key를 기준으로 어떤 partition에 메시지를 넣을지 결정합니다. 같은 key를 가진 메시지는 보통 같은 partition으로 들어갑니다.
 
 ```text
-key = device-A -> Partition 1
-key = device-B -> Partition 3
-key = device-A -> Partition 1
+key = entity-A -> Partition 1
+key = entity-B -> Partition 3
+key = entity-A -> Partition 1
 ```
 
 이 동작은 순서 보장과 관련이 있습니다.
 
 Kafka는 topic 전체의 순서를 보장하지 않습니다. Kafka가 보장하는 것은 partition 안에서의 순서입니다.
 
-따라서 특정 장비, 사용자, 주문처럼 같은 기준의 메시지를 순서대로 처리해야 한다면 key 설계가 중요합니다.
+따라서 특정 개체, 사용자, 주문처럼 같은 기준의 메시지를 순서대로 처리해야 한다면 key 설계가 중요합니다.
 
 하지만 여기에도 trade-off가 있습니다.
 
@@ -136,7 +136,7 @@ Consumer는 Kafka에서 메시지를 읽는 클라이언트입니다.
 같은 Consumer Group에 속한 Consumer들은 topic의 partition을 나누어 처리합니다.
 
 ```text
-Topic: location-raw
+Topic: event-raw
   Partition 0 -> Consumer A
   Partition 1 -> Consumer B
   Partition 2 -> Consumer C
@@ -202,7 +202,7 @@ latest: 새로 들어오는 메시지부터 읽음
 
 즉 `latest`로 설정했다고 해서 서비스 재기동 시 항상 최신 메시지부터 읽는 것은 아닙니다.
 
-실시간 위치 데이터처럼 오래된 메시지를 뒤늦게 처리하는 것이 문제가 될 수 있는 시스템에서는 이 차이를 반드시 이해해야 합니다. 필요한 경우 partition 할당 이후 명시적으로 최신 offset으로 이동하는 전략을 검토해야 합니다.
+현재성이 중요한 이벤트처럼 오래된 메시지를 뒤늦게 처리하는 것이 문제가 될 수 있는 시스템에서는 이 차이를 반드시 이해해야 합니다. 필요한 경우 partition 할당 이후 명시적으로 최신 offset으로 이동하는 전략을 검토해야 합니다.
 
 ---
 

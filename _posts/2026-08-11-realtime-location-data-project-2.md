@@ -1,8 +1,8 @@
 ---
 layout: single
-title:  "실시간 위치 데이터 처리 시스템 개선기 (2): 120초 Timeout 로그에서 병목을 찾기까지"
+title:  "대규모 이벤트 처리 시스템 개선기 (2): 장애 로그에서 성능 병목을 찾기까지"
 date:   2026-08-11 09:30:00 +0900
-lastmod : 2026-08-11 15:00:00 +0900
+lastmod : 2026-08-17 15:00:00 +0900
 sitemap :
 changefreq : daily
 priority : 1.0
@@ -15,15 +15,15 @@ tags:   kafka vertx zookeeper backend realtime troubleshooting performance
 
 실시간 처리로 전환한 뒤에는 한숨 돌릴 수 있을 거라고 생각했습니다. 그런데 처리 주기가 짧아지자, 그동안 숨어 있던 지연과 실패가 기다렸다는 듯 로그에 함께 나타나기 시작했습니다.
 
-- Producer record가 120초 후 만료됐다.
-- Vert.x 이벤트 루프가 3~6초 동안 멈췄다.
+- Producer record가 설정된 전송 제한시간을 넘겨 만료됐다.
+- Vert.x 이벤트 루프가 허용 시간을 넘겨 멈췄다.
 - Consumer가 offset을 commit하는 순간 group rebalance 오류가 발생했다.
 - Kafka broker의 `Node disconnected` 로그가 반복됐다.
 - ZooKeeper는 일부 client의 session 요청을 거부했다.
 
 솔직히 처음에는 Kafka 클러스터가 불안정해진 것으로 봤습니다. timeout, disconnect, rebalance가 비슷한 시간에 찍혔기 때문입니다. 하지만 로그를 하나씩 코드 흐름 위에 올려놓자 서로 다른 계층의 문제가 한꺼번에 보였을 뿐이라는 사실이 드러났습니다.
 
-이번 글에서는 각각의 로그가 어느 계층에서 발생했고, 어떤 코드와 설정을 함께 확인했는지 정리합니다. 회사명, 서버 주소, 실제 topic 이름, 장비 식별자는 일반화했습니다. 아직 측정하지 않은 성능 수치나 적용하지 않은 개선은 완료된 결과처럼 적지 않았습니다.
+이번 글에서는 각각의 로그가 어느 계층에서 발생했고, 어떤 코드와 설정을 함께 확인했는지 정리합니다. 컴포넌트명, 데이터 유형, 식별자, 처리 기준과 수치는 운영 정보를 보호하기 위해 역할 중심의 표현과 범위 값으로 일반화했습니다. 아직 측정하지 않은 성능 수치나 적용하지 않은 개선은 완료된 결과처럼 적지 않았습니다.
 
 ---
 
@@ -32,10 +32,10 @@ tags:   kafka vertx zookeeper backend realtime troubleshooting performance
 먼저 로그를 개별적으로 보지 않고 전체 처리 흐름 위에 배치했습니다.
 
 ```text
-수집 장비
-  -> CMD: 패킷 파싱 및 topic 분배
+외부 데이터 소스
+  -> 수집·분배 컴포넌트: 데이터 검증 및 topic 분배
   -> Kafka
-  -> PMD: MAC별 버퍼링 및 위치 계산
+  -> 집계·계산 컴포넌트: 식별자별 버퍼링 및 결과 계산
   -> Kafka
   -> 후속 시스템
 ```
@@ -54,32 +54,32 @@ tags:   kafka vertx zookeeper backend realtime troubleshooting performance
 
 ---
 
-## 2. Producer Timeout은 10건 버퍼의 시간초과가 아니었다
+## 2. Producer Timeout은 애플리케이션 버퍼의 시간초과가 아니었다
 
-PMD에서 다음과 같은 형태의 오류가 발생했습니다.
+집계·계산 컴포넌트에서 다음과 같은 형태의 오류가 발생했습니다.
 
 ```text
-failed to publish buffer. reason=size, count=10
+failed to publish buffer. reason=size, count=N
 
 TimeoutException:
 Expiring N record(s) for topic-partition:
-120000 ms has passed since batch creation
+... ms has passed since batch creation
 ```
 
-저도 처음에는 `reason=size`, `count=10`, `120000 ms`를 한 덩어리로 읽었습니다. 그래서 다음처럼 이해했습니다.
+저도 처음에는 `reason=size`, `count=N`, 전송 제한시간 초과 로그를 한 덩어리로 읽었습니다. 그래서 다음처럼 이해했습니다.
 
-> 10건을 모으려고 기다리다가 애플리케이션 버퍼가 120초 후 만료됐다.
+> 설정된 건수를 모으려고 기다리다가 애플리케이션 버퍼가 제한시간 후 만료됐다.
 
 코드를 따라가 보니 예상이 틀렸습니다. 실제로는 서로 다른 두 단계의 로그였습니다.
 
-`reason=size`는 PMD가 특정 MAC의 데이터를 10건 모아 위치 계산과 후속 publish를 시작했다는 의미입니다. 반면 `120000 ms has passed since batch creation`은 그 이후 Kafka Producer에 전달된 record가 제한시간 안에 broker로 전송되지 못했다는 의미입니다.
+`reason=size`는 집계·계산 컴포넌트가 특정 식별자의 데이터를 설정된 건수만큼 모아 결과 계산과 후속 publish를 시작했다는 의미입니다. 반면 전송 제한시간 초과 로그는 그 이후 Kafka Producer에 전달된 record가 제한시간 안에 broker로 전송되지 못했다는 의미입니다.
 
 | 구분 | 목적 | 완료 조건 | 실패가 의미하는 것 |
 |---|---|---|---|
-| MAC별 애플리케이션 버퍼 | 위치 계산에 사용할 스캔 집계 | 10건 또는 제한시간 | 위치 계산을 언제 시작할 것인가 |
+| 식별자별 애플리케이션 버퍼 | 결과 계산에 사용할 이벤트 집계 | 건수 임계값 또는 시간 임계값 | 결과 계산을 언제 시작할 것인가 |
 | Kafka Producer 배치 | 여러 record의 전송 효율 향상 | `batch.size`, `linger.ms`, broker 응답 | record가 Kafka에 저장됐는가 |
 
-Kafka Producer의 `batch.size`와 `linger.ms`는 애플리케이션이 10건을 모으는 시간과 직접적인 관계가 없습니다. 또한 Consumer lag가 Producer timeout의 직접 원인이라고 단정할 수도 없습니다. 같은 broker의 자원 부족이나 전체 시스템 부하가 두 현상을 동시에 만들 수는 있지만, 각각의 지표를 따로 확인해야 합니다.
+Kafka Producer의 `batch.size`와 `linger.ms`는 애플리케이션이 설정된 건수를 모으는 시간과 직접적인 관계가 없습니다. 또한 Consumer lag가 Producer timeout의 직접 원인이라고 단정할 수도 없습니다. 같은 broker의 자원 부족이나 전체 시스템 부하가 두 현상을 동시에 만들 수는 있지만, 각각의 지표를 따로 확인해야 합니다.
 
 Producer timeout에서는 다음 순서로 범위를 좁힙니다.
 
@@ -93,15 +93,15 @@ Producer timeout에서는 다음 순서로 범위를 좁힙니다.
 
 ---
 
-## 3. 10건이 안 들어오는 장비도 처리해야 했다
+## 3. 건수 임계값에 도달하지 않는 데이터도 처리해야 했다
 
-위치 계산에는 여러 AP에서 수집한 신호가 필요합니다. 그래서 PMD는 MAC별로 데이터를 모으고 기본적으로 10건이 되면 계산을 시작합니다.
+결과 계산에는 여러 데이터 소스에서 수집한 이벤트가 필요합니다. 그래서 집계·계산 컴포넌트는 식별자별로 데이터를 모으고 설정된 건수에 도달하면 계산을 시작합니다.
 
 ```text
-데이터 수 >= 10
+데이터 수 >= SIZE_THRESHOLD
     -> reason=size로 즉시 처리
 
-데이터 수 < 10이고 제한시간 경과
+데이터 수 < SIZE_THRESHOLD이고 제한시간 경과
     -> reason=timeout으로 처리
 ```
 
@@ -109,12 +109,12 @@ Producer timeout에서는 다음 순서로 범위를 좁힙니다.
 
 현재 처리 흐름에는 다음 조건도 포함되어 있습니다.
 
-- 잘못된 MAC과 허용하지 않는 MAC은 AP 조회와 버퍼 생성 전에 제외한다.
-- 알 수 없는 AP 데이터는 위치 계산 대상에 넣지 않는다.
-- 주기적으로 오래된 MAC 버퍼를 찾아 `reason=timeout`으로 처리한다.
+- 잘못됐거나 허용하지 않는 식별자는 메타데이터 조회와 버퍼 생성 전에 제외한다.
+- 알 수 없는 데이터 소스의 이벤트는 결과 계산 대상에 넣지 않는다.
+- 주기적으로 오래된 식별자 버퍼를 찾아 `reason=timeout`으로 처리한다.
 - partition이 revoke되거나 프로세스가 종료될 때 남은 버퍼를 flush한다.
 
-다만 여기서 더 중요한 문제가 있었습니다. 현재 구현은 MAC 버퍼를 먼저 Map에서 제거한 뒤 Kafka Producer의 비동기 `send()`를 호출합니다.
+다만 여기서 더 중요한 문제가 있었습니다. 현재 구현은 식별자 버퍼를 먼저 Map에서 제거한 뒤 Kafka Producer의 비동기 `send()`를 호출합니다.
 
 ```text
 버퍼 제거
@@ -138,16 +138,16 @@ Producer timeout에서는 다음 순서로 범위를 좁힙니다.
 
 ## 4. Vert.x 이벤트 루프가 멈춘 이유
 
-CMD에서는 다음과 같은 경고가 반복됐습니다.
+수집·분배 컴포넌트에서는 다음과 같은 경고가 반복됐습니다.
 
 ```text
 Thread vert.x-eventloop-thread-N has been blocked
-for 3803 ms, time limit is 2000 ms
+for ... ms, time limit is ... ms
 ```
 
 이 로그는 Kafka broker가 느리다는 의미가 아니라 Vert.x 이벤트 루프의 작업이 제한시간 안에 반환되지 않았다는 의미입니다.
 
-CMD의 Wi-Fi Consumer 흐름을 확인해 보니 일반 Verticle의 `setPeriodic` 핸들러에서 다음 작업을 순서대로 수행하고 있었습니다.
+수집·분배 컴포넌트의 입력 Consumer 흐름을 확인해 보니 일반 Verticle의 `setPeriodic` 핸들러에서 다음 작업을 순서대로 수행하고 있었습니다.
 
 ```text
 Event Loop
@@ -159,7 +159,7 @@ Event Loop
   -> KafkaConsumer.commitSync()
 ```
 
-스택 트레이스를 처음 봤을 때는 `poll()` 하나가 문제처럼 보였습니다. 하지만 코드를 따라가니 최대 500ms를 기다리는 `poll()` 뒤로 DB 조회, 대량 반복 처리, 동기 commit이 같은 이벤트 루프에서 이어지고 있었습니다. 하나씩 보면 짧아 보이는 호출도 한 handler 안에 쌓이면 2초 제한을 쉽게 넘겼습니다.
+스택 트레이스를 처음 봤을 때는 `poll()` 하나가 문제처럼 보였습니다. 하지만 코드를 따라가니 대기 시간이 있는 `poll()` 뒤로 DB 조회, 대량 반복 처리, 동기 commit이 같은 이벤트 루프에서 이어지고 있었습니다. 하나씩 보면 짧아 보이는 호출도 한 handler 안에 쌓이면 이벤트 루프의 허용 시간을 쉽게 넘겼습니다.
 
 Vert.x 이벤트 루프는 짧고 non-blocking인 작업에 적합합니다. `blockedThreadCheckInterval`을 늘리면 경고가 늦게 출력될 뿐, 다른 이벤트 처리가 지연되는 문제는 그대로 남습니다.
 
@@ -173,7 +173,7 @@ Kafka Consumer Worker
   -> Offset Commit
 ```
 
-여기서 패킷 파싱, 상태 판정, T_ID 필터, topic 결정은 Kafka나 DB를 모르는 순수 로직으로 분리할 수 있습니다. 그래야 입력 하나에 어떤 결과가 나오는지 빠르게 단위 테스트할 수 있고, 느린 I/O는 worker 영역에서만 실행할 수 있습니다.
+여기서 데이터 파싱, 상태 판정, 메시지 유형 필터, topic 결정은 Kafka나 DB를 모르는 순수 로직으로 분리할 수 있습니다. 그래야 입력 하나에 어떤 결과가 나오는지 빠르게 단위 테스트할 수 있고, 느린 I/O는 worker 영역에서만 실행할 수 있습니다.
 
 ---
 
@@ -190,7 +190,7 @@ Kafka Consumer는 정해진 주기 안에 계속 `poll()`을 호출해야 합니
 
 이미 partition 소유권을 잃은 consumer가 `commitSync()`를 호출하면 commit이 거부됩니다.
 
-다만 3~6초의 blocked-thread 로그 하나만으로 `max.poll.interval.ms` 초과를 증명할 수는 없습니다. 반복되는 처리 지연, 실제 poll 간격, rebalance 시각을 함께 확인해야 합니다. 구조적으로 같은 handler 안에 blocking 작업이 모여 있다는 사실은 강한 의심 지점이지만 로그의 시간 상관관계까지 확인해야 원인이라고 결론 내릴 수 있습니다.
+다만 blocked-thread 로그 하나만으로 `max.poll.interval.ms` 초과를 증명할 수는 없습니다. 반복되는 처리 지연, 실제 poll 간격, rebalance 시각을 함께 확인해야 합니다. 구조적으로 같은 handler 안에 blocking 작업이 모여 있다는 사실은 강한 의심 지점이지만 로그의 시간 상관관계까지 확인해야 원인이라고 결론 내릴 수 있습니다.
 
 확인하고 조정할 항목은 다음과 같습니다.
 
@@ -243,37 +243,37 @@ ZooKeeper 구성에서 다시 확인한 내용은 다음과 같습니다.
 
 이번 로그를 정리하면서 개선 대상을 세 영역으로 나눴습니다.
 
-### CMD
+### 수집·분배 컴포넌트
 
 - 이벤트 루프에서 동기 Kafka 및 DB 작업을 분리한다.
 - polling, 패킷 파싱, DB 저장의 책임을 분리한다.
-- T_ID 필터와 topic 분배를 순수 로직으로 추출한다.
+- 메시지 유형 필터와 topic 분배를 순수 로직으로 추출한다.
 - DB 저장 성공과 offset commit의 관계를 명확히 한다.
 - downstream이 느릴 때 무제한으로 Event Bus에 쌓이지 않도록 backpressure를 둔다.
 
-### PMD
+### 집계·계산 컴포넌트
 
-- MAC별 size-or-time 버퍼링을 유지한다.
-- 잘못된 MAC과 AP를 가능한 앞 단계에서 제외한다.
-- AP와 tracker 정보는 주기적으로 갱신되는 snapshot cache로 조회한다.
+- 식별자별 size-or-time 버퍼링을 유지한다.
+- 잘못된 식별자와 데이터 소스를 가능한 앞 단계에서 제외한다.
+- 데이터 소스와 장비 메타데이터는 주기적으로 갱신되는 snapshot cache로 조회한다.
 - publish 실패 시 retry, DLQ, 중복 방지 정책을 정의한다.
 - 종료와 rebalance 시 잔여 버퍼의 publish 완료를 추적한다.
 
 ### Kafka
 
 - topic 수가 아니라 partition 수와 consumer 수를 함께 본다.
-- MAC 기반 key가 특정 partition에 집중되는지 확인한다.
+- 이벤트 식별자 기반 key가 특정 partition에 집중되는지 확인한다.
 - partition별 유입량과 Consumer lag 편차를 확인한다.
 - Producer timeout이 발생한 partition과 broker 상태를 연결해서 본다.
 - 설정 변경 전후에는 동일한 부하를 사용한다.
 
-이 중 size-or-time 버퍼, MAC 필터, AP·tracker cache처럼 현재 적용된 항목과 publish 재시도 및 commit 경계처럼 추가 구현이 필요한 항목을 구분해서 관리하고 있습니다.
+이 중 size-or-time 버퍼, 식별자 필터, 메타데이터 cache처럼 현재 적용된 항목과 publish 재시도 및 commit 경계처럼 추가 구현이 필요한 항목을 구분해서 관리하고 있습니다.
 
 ---
 
 ## 8. 무엇을 측정해야 개선이라고 말할 수 있을까
 
-테스트에서는 1분에 약 140만 건 수준의 최대 유입량을 고려했습니다. 하지만 단순히 요청이 성공했는지만으로는 실시간 처리 성능을 판단하기 어렵습니다.
+테스트에서는 실제 피크 유입량을 상회하는 부하를 고려했습니다. 하지만 단순히 요청이 성공했는지만으로는 실시간 처리 성능을 판단하기 어렵습니다.
 
 JMeter와 Kafka UI, 애플리케이션 로그를 함께 사용해 다음 항목을 같은 시간축에서 봐야 합니다.
 
@@ -295,7 +295,7 @@ JMeter와 Kafka UI, 애플리케이션 로그를 함께 사용해 다음 항목�
 3. DB 응답을 지연시킨다.
 4. Kafka broker 하나를 일시 중단한다.
 5. 처리 중 consumer를 재시작해 rebalance를 발생시킨다.
-6. 특정 MAC에는 10건 미만의 데이터만 전달한다.
+6. 특정 식별자에는 건수 임계값 미만의 데이터만 전달한다.
 7. 특정 key를 집중시켜 partition skew를 만든다.
 
 현재 공개할 수 있는 반복 측정 결과가 충분하지 않은 항목은 숫자를 임의로 채우지 않았습니다. 동일 조건에서 최소 3회 측정한 뒤 중앙값과 p95·p99를 비교해야 개선 효과라고 말할 수 있습니다.
@@ -304,20 +304,20 @@ JMeter와 Kafka UI, 애플리케이션 로그를 함께 사용해 다음 항목�
 
 ## 9. 재발을 막기 위한 테스트
 
-현재 MAC 필터에는 다음 단위 테스트가 적용돼 있습니다.
+현재 식별자 필터에는 다음 단위 테스트가 적용돼 있습니다.
 
-- 허용한 세 번째 MAC octet만 통과하는가
+- 허용된 식별자 패턴만 통과하는가
 - 대소문자를 구분하지 않는가
-- null, 빈 문자열, 잘못된 길이와 16진수를 거부하는가
-- 쉼표로 구분한 여러 prefix를 처리하는가
+- null, 빈 문자열과 잘못된 형식을 거부하는가
+- 여러 허용 패턴을 처리하는가
 - 설정이 없거나 잘못되면 시작 시 실패하는가
 
 하지만 전체 전달 흐름을 보호하려면 테스트 범위를 더 넓혀야 합니다.
 
-- T_ID 버킷에 따라 포함·제외가 정확한지
-- MAC의 마지막 값에 따라 같은 topic으로 안정적으로 분배되는지
-- 10건 도달 시 `reason=size`로 한 번만 flush되는지
-- 1~9건이 제한시간 후 `reason=timeout`으로 flush되는지
+- 메시지 유형에 따라 포함·제외가 정확한지
+- 동일한 식별자가 같은 topic으로 안정적으로 분배되는지
+- 건수 임계값 도달 시 `reason=size`로 한 번만 flush되는지
+- 임계값 미만의 데이터가 제한시간 후 `reason=timeout`으로 flush되는지
 - publish 실패 후 버퍼가 유실되지 않는지
 - 처리 성공 전에 offset이 commit되지 않는지
 - rebalance와 종료 시 잔여 데이터가 처리되는지
@@ -338,4 +338,4 @@ Producer timeout은 전송 계층에서 발생했고, rebalance는 Consumer의 p
 
 다음 글에서는 이 과정에서 드러난 전역 설정, Kafka·DB 직접 의존성, 큰 Verticle을 어떻게 테스트 가능한 구조로 분리할 수 있는지 정리해보려고 합니다.
 
-> 실시간 위치 데이터 처리 시스템 개선기 (3): 레거시 Kafka·Vert.x 코드를 테스트 가능한 구조로 바꾸기
+> 대규모 이벤트 처리 시스템 개선기 (3): 레거시 Kafka·Vert.x 코드를 테스트 가능한 구조로 바꾸기
