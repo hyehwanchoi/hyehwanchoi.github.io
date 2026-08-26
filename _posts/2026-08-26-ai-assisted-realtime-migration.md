@@ -1,8 +1,8 @@
 ---
 layout: single
 title:  "Codex와 Kiro를 함께 활용한 실시간 시스템 전환 기록"
-date:   2026-08-26 12:00:00
-lastmod : 2026-08-26 12:00:00
+date:   2026-08-26 17:25:00 +0900
+lastmod : 2026-08-26 17:25:00 +0900
 sitemap :
 changefreq : daily
 priority : 1.0
