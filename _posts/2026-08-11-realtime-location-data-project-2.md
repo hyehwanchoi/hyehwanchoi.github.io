@@ -8,7 +8,7 @@ changefreq : daily
 priority : 1.0
 author: HyeHwan Choi
 categories: project
-tags:   kafka vertx zookeeper backend realtime troubleshooting performance
+tags:   kafka zookeeper backend realtime troubleshooting performance
 ---
 
 [지난 글](/project/realtime-location-data-project/)에서는 일정 시간 데이터를 모아 처리하던 구조를 실시간 흐름으로 바꾸는 과정을 다뤘습니다.
@@ -21,7 +21,7 @@ tags:   kafka vertx zookeeper backend realtime troubleshooting performance
 TimeoutException: Expiring N record(s) for topic-partition:
 ... ms has passed since batch creation
 
-Thread vert.x-eventloop-thread-N has been blocked
+Thread event-loop-N has been blocked
 for ... ms, time limit is ... ms
 
 Commit cannot be completed since the group has already rebalanced
@@ -152,16 +152,16 @@ Producer timeout에서는 다음 순서로 범위를 좁힙니다.
 
 ## 4. Event Loop 안에서 너무 많은 일을 하고 있었다
 
-다음으로 수집·분배 컴포넌트의 Vert.x 경고를 확인했습니다.
+다음으로 수집·분배 컴포넌트의 이벤트 루프 경고를 확인했습니다.
 
 ```text
-Thread vert.x-eventloop-thread-N has been blocked
+Thread event-loop-N has been blocked
 for ... ms, time limit is ... ms
 ```
 
-처음에는 Kafka 응답이 느려서 발생한 경고라고 생각했습니다. 하지만 이 로그는 Vert.x 이벤트 루프에서 실행한 작업이 제한시간 안에 반환되지 않았다는 의미였습니다.
+처음에는 Kafka 응답이 느려서 발생한 경고라고 생각했습니다. 하지만 이 로그는 이벤트 루프에서 실행한 작업이 제한시간 안에 반환되지 않았다는 의미였습니다.
 
-수집·분배 컴포넌트의 입력 Consumer 흐름을 확인해 보니 일반 Verticle의 `setPeriodic` 핸들러에서 다음 작업을 순서대로 수행하고 있었습니다.
+수집·분배 컴포넌트의 입력 Consumer 흐름을 확인해 보니 주기 실행 핸들러에서 다음 작업을 순서대로 수행하고 있었습니다.
 
 ```text
 Event Loop
@@ -175,7 +175,7 @@ Event Loop
 
 스택 트레이스에는 `poll()`이 보였지만 이것만의 문제는 아니었습니다. 같은 handler 안에서 DB 조회, 대량 반복 처리, 동기 commit까지 순서대로 실행하고 있었습니다. 각각의 실행 시간이 짧더라도 한 번의 handler 실행 시간으로 합치면 이벤트 루프 제한을 넘을 수 있는 구조였습니다.
 
-Vert.x 이벤트 루프는 짧고 non-blocking인 작업에 적합합니다. `blockedThreadCheckInterval`을 늘리면 경고가 늦게 출력될 뿐, 다른 이벤트 처리가 지연되는 문제는 그대로 남습니다.
+이벤트 루프는 짧고 non-blocking인 작업에 적합합니다. 차단 감지 시간을 늘리면 경고가 늦게 출력될 뿐, 다른 이벤트 처리가 지연되는 문제는 그대로 남습니다.
 
 개선 방향은 작업의 책임과 실행 스레드를 분리하는 것입니다.
 
@@ -336,9 +336,9 @@ JMeter와 Kafka UI, 애플리케이션 로그를 함께 사용해 다음 항목�
 - 처리 성공 전에 offset이 commit되지 않는지
 - rebalance와 종료 시 잔여 데이터가 처리되는지
 - 동일한 입력에 리팩터링 전후 payload가 같은지
-- DB가 느려도 Vert.x 이벤트 루프가 차단되지 않는지
+- DB가 느려도 이벤트 루프가 차단되지 않는지
 
-특히 시간 기반 버퍼는 실제로 몇 분을 기다리는 테스트보다 `Clock`과 scheduler를 주입해 가상 시간으로 검증할 수 있어야 합니다. Kafka, DB, Vert.x와 분리된 use case가 필요한 이유이기도 합니다.
+특히 시간 기반 버퍼는 실제로 몇 분을 기다리는 테스트보다 `Clock`과 scheduler를 주입해 가상 시간으로 검증할 수 있어야 합니다. Kafka, DB와 분리된 use case가 필요한 이유이기도 합니다.
 
 ---
 
@@ -350,6 +350,6 @@ Producer timeout은 전송 계층에서 발생했고, rebalance는 Consumer의 p
 
 아직 모든 문제를 해결한 것은 아닙니다. publish 실패 시 버퍼를 어떻게 복구할지, offset commit과 출력 publish를 어디까지 하나의 처리 단위로 볼지 추가로 정해야 합니다. 이번 작업을 통해 비슷한 시각에 발생한 로그라도 먼저 발생 계층을 구분하고 코드와 지표를 함께 확인해야 한다는 점을 배웠습니다.
 
-다음 글에서는 이 과정에서 드러난 전역 설정, Kafka·DB 직접 의존성, 큰 Verticle을 어떻게 테스트 가능한 구조로 분리할 수 있는지 정리해보려고 합니다.
+다음 글에서는 이 과정에서 드러난 전역 설정과 외부 시스템 직접 의존성을 어떻게 테스트 가능한 구조로 분리할 수 있는지 정리해보려고 합니다.
 
-> 대규모 이벤트 처리 시스템 개선기 (3): 레거시 Kafka·Vert.x 코드를 테스트 가능한 구조로 바꾸기
+> 대규모 이벤트 처리 시스템 개선기 (3): 외부 시스템에 의존하는 코드를 테스트 가능한 구조로 바꾸기
