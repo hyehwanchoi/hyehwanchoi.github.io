@@ -251,6 +251,6 @@ partition 수를 늘리는 것만으로는 충분하지 않습니다. 메시지 
 
 이 글에는 매끄러운 성공담보다, 실시간이라는 한 단어 뒤에 얼마나 많은 확인 항목이 따라왔는지를 남기고 싶었습니다.
 
-실시간 전환 이후 확인한 Kafka Producer timeout, Vert.x blocked thread, Consumer rebalance, ZooKeeper 연결 문제는 후속 글에서 더 자세히 정리했습니다.
+실시간 전환 이후 확인한 Kafka 클러스터 구성 문제와 운영 안정화 과정은 후속 글에서 더 자세히 정리했습니다.
 
-> [대규모 이벤트 처리 시스템 개선기 (2): 장애 로그에서 성능 병목을 찾기까지](/project/realtime-location-data-project-2/)
+> [대규모 이벤트 처리 시스템 개선기 (2): Kafka 클러스터 장애와 운영 안정화](/project/realtime-location-data-project-2/)
